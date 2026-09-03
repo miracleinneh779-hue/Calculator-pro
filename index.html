@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --bg-subtle: #12121a;
+      --card: #1a1a24;
+      --fg: #e8e8f0;
+      --muted: #6b6b80;
+      --accent: #00d4aa;
+      --accent-hover: #00f5c4;
+      --op: #ff6b6b;
+      --op-hover: #ff8c8c;
+      --func: #7d8cff;
+      --func-hover: #9a9fff;
+      --num: #ffa726;
+      --num-hover: #ffc451;
+      --equal: #a855f7;
+      --equal-hover: #c984d6;
+      --error: #ff5252;
+      --border: #2a2a3a;
+      --radius: 12px;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      --transition: 0.2s ease;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .calculator-container {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+
+    .display-wrapper {
+      background: var(--bg-subtle);
+      padding: 24px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #display {
+      width: 100%;
+      height: 56px;
+      font-size: 28px;
+      font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+      background: transparent;
+      color: var(--fg);
+      border: none;
+      border-radius: var(--radius);
+      padding: 0 12px;
+      text-align: right;
+      width: 100%;
+      outline: none;
+      resize: none;
+      font-weight: 400;
+      line-height: 1.2;
+    }
+
+    #display::placeholder { color: var(--muted); }
+
+    #history {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: right;
+      margin-bottom: 8px;
+      min-height: 16px;
+    }
+
+    /* Button grid - 4 columns */
+    .button-grid {
+      display: grid;
+      gap: 8px;
+      padding: 0 20px 20px;
+    }
+
+    /* 4-column rows */
+    .grid-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+
+    .button {
+      padding: 14px 6px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      background: var(--card);
+      color: var(--muted);
+      min-height: 44px;
+    }
+
+    .button:hover {
+      background: var(--bg-subtle);
+      color: var(--fg);
+    }
+
+    .button:active {
+      transform: scale(0.95);
+      background: var(--bg-subtle);
+    }
+
+    .button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* Number buttons */
+    .num-btn { background: var(--num); color: var(--bg); }
+    .num-btn:hover { background: var(--num-hover); }
+
+    /* Operator buttons */
+    .op-btn { background: var(--op); color: white; }
+    .op-btn:hover { background: var(--op-hover); }
+
+    /* Function buttons */
+    .func-btn { background: var(--func); color: var(--bg); }
+    .func-btn:hover { background: var(--func-hover); }
+
+    /* Equal button - spans 2 columns */
+    .equal-btn {
+      background: var(--equal);
+      color: white;
+      grid-column: span 2;
+    }
+
+    .equal-btn:hover { background: var(--equal-hover); }
+
+    /* Special double-wide buttons */
+    .double-wide { grid-column: span 2; }
+
+    /* Action buttons - AC, backspace */
+    .ac-btn { background: var(--bg-subtle); color: var(--muted); }
+    .ac-btn:hover { background: var(--bg); color: var(--fg); }
+
+    .backspace-btn { background: var(--bg-subtle); color: var(--muted); }
+    .backspace-btn:hover { background: var(--bg); color: var(--fg); }
+
+    .deg-btn { background: var(--bg-subtle); color: var(--muted); }
+    .deg-btn:hover { background: var(--bg); color: var(--fg); }
+
+    /* History panel */
+    .history-panel {
+      position: fixed;
+      top: 0;
+      right: -400px;
+      width: 400px;
+      max-height: 100vh;
+      background: var(--card);
+      border-left: 1px solid var(--border);
+      padding: 20px;
+      transition: right 0.3s ease;
+      z-index: 100;
+      overflow-y: auto;
+      height: calc(100vh - 40px);
+    }
+
+    .history-panel.open { right: 0; }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .history-title { font-size: 16px; font-weight: 600; }
+
+    .close-history {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .history-list { max-height: 300px; overflow-y: auto; }
+
+    .history-item {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .history-item:last-child { border-bottom: none; }
+
+    .history-result { color: var(--accent); font-weight: 500; }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in-up { animation: fadeInUp 0.3s ease forwards; }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="calculator-container">
+    <div class="display-wrapper">
+      <button class="backspace-btn" id="backspace" aria-label="Backspace" title="Backspace">←</button>
+      <span id="history">0</span>
+      <input type="text" id="display" readonly value="0" aria-label="Calculator display">
+    </div>
+
+    <div class="button-grid">
+      <div class="grid-row">
+        <button class="ac-btn double-wide" id="ac" aria-label="Clear All" title="Clear All">AC</button>
+        <button class="op-btn" id="percent" aria-label="Percentage" title="%">%</button>
+        <button class="func-btn" id="sqrt" aria-label="Square Root" title="√">√</button>
+        <button class="func-btn" id="square" aria-label="Square" title="x²">x²</button>
+      </div>
+
+      <div class="grid-row">
+        <button class="func-btn" id="open-paren" aria-label="Open Parenthesis" title="(">(</button>
+        <button class="func-btn" id="close-paren" aria-label="Close Parenthesis" title=")">)</button>
+        <button class="func-btn" id="log" aria-label="Logarithm" title="log">log</button>
+        <button class="func-btn" id="ln" aria-label="Natural Log" title="ln">ln</button>
+      </div>
+
+      <div class="grid-row">
+        <button class="func-btn" id="cos" aria-label="Cosine" title="cos">cos</button>
+        <button class="func-btn" id="tan" aria-label="Tangent" title="tan">tan</button>
+        <button class="func-btn" id="sin" aria-label="Sine" title="sin">sin</button>
+        <button class="double-wide func-btn" id="e" aria-label="Euler's Number" title="e">e</button>
+      </div>
+
+      <div class="grid-row">
+        <button class="deg-btn" id="deg-rad-toggle">DEG</button>
+        <button class="func-btn special-btn" id="open-brace" aria-label="Open Bracket" title="([)">[</button>
+        <button class="func-btn special-btn" id="close-brace" aria-label="Close Bracket" title=")]">]</button>
+        <button class="op-btn" id="divide" aria-label="Divide" title="÷">÷</button>
+      </div>
+
+      <div class="grid-row">
+        <button class="num-btn" id="btn7">7</button>
+        <button class="num-btn" id="btn8">8</button>
+        <button class="num-btn" id="btn9">9</button>
+        <button class="op-btn" id="multiply" aria-label="Multiply" title="×">×</button>
+      </div>
+
+      <div class="grid-row">
+        <button class="num-btn" id="btn4">4</button>
+        <button class="num-btn" id="btn5">5</button>
+        <button class="num-btn" id="btn6">6</button>
+        <button class="op-btn" id="subtract" aria-label="Subtract" title="−">−</button>
+      </div>
+
+      <div class="grid-row">
+        <button class="num-btn" id="btn1">1</button>
+        <button class="num-btn" id="btn2">2</button>
+        <button class="num-btn" id="btn3">3</button>
+        <button class="op-btn" id="add" aria-label="Add" title="+">+</button>
+      </div>
+
+      <div class="grid-row">
+        <button class="num-btn double-wide" id="btn0">0</button>
+        <button class="num-btn" id="decimal">.</button>
+        <button class="equal-btn" id="equals" aria-label="Equals" title="=">=</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Panel -->
+  <div class="history-panel" id="history-panel">
+    <div class="history-header">
+      <span class="history-title">Calculation History</span>
+      <button class="close-history" id="close-history" aria-label="Close History">×</button>
+    </div>
+    <div class="history-list" id="history-list">
+      <p style="color: var(--muted); font-style: italic; padding: 20px 0;">No calculations yet</p>
+    </div>
+  </div>
+
+  <script>
+    // Calculator State
+    const state = {
+      display: '0',
+      previousDisplay: '',
+      operator: null,
+      firstOperand: null,
+      waitingForOperand: true,
+      history: JSON.parse(localStorage.getItem('calcHistory') || '[]'),
+      degreeMode: true,
+    };
+
+    // DOM Elements
+    const display = document.getElementById('display');
+    const historyEl = document.getElementById('history');
+    const backspaceBtn = document.getElementById('backspace');
+    const acBtn = document.getElementById('ac');
+    const percentBtn = document.getElementById('percent');
+    const sqrtBtn = document.getElementById('sqrt');
+    const squareBtn = document.getElementById('square');
+    const openParenBtn = document.getElementById('open-paren');
+    const closeParenBtn = document.getElementById('close-paren');
+    const logBtn = document.getElementById('log');
+    const lnBtn = document.getElementById('ln');
+    const cosBtn = document.getElementById('cos');
+    const tanBtn = document.getElementById('tan');
+    const sinBtn = document.getElementById('sin');
+    const eBtn = document.getElementById('e');
+    const degRadToggle = document.getElementById('deg-rad-toggle');
+    const equalsBtn = document.getElementById('equals');
+    const historyPanel = document.getElementById('history-panel');
+    const closeHistoryBtn = document.getElementById('close-history');
+    const historyList = document.getElementById('history-list');
+
+    // Number buttons
+    const numberButtons = document.querySelectorAll('.num-btn');
+    const operationButtons = document.querySelectorAll('.op-btn');
+    const funcButtons = document.querySelectorAll('.func-btn');
+
+    // Initialize
+    function init() {
+      updateDisplay();
+      setupEventListeners();
+      updateDegRadButton();
+    }
+
+    // Update display
+    function updateDisplay() {
+      display.value = state.display;
+      historyEl.textContent = formatHistory();
+    }
+
+    // Format history string for display
+    function formatHistory() {
+      if (state.display === '0' && state.previousDisplay === '' && !state.operator) {
+        return '';
+      }
+      return state.display;
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+      // Number buttons
+      numberButtons.forEach(btn => {
+        btn.addEventListener('click', () => handleNumber(btn.textContent));
+      });
+
+      // Operation buttons
+      operationButtons.forEach(btn => {
+        btn.addEventListener('click', () => handleOperation(btn.textContent));
+      });
+
+      // Function buttons
+      funcButtons.forEach(btn => {
+        btn.addEventListener('click', () => handleFunction(btn.id));
+      });
+
+      // Special buttons
+      acBtn.addEventListener('click', clearAll);
+      percentBtn.addEventListener('click', handlePercent);
+      sqrtBtn.addEventListener('click', () => handleFunction('sqrt'));
+      squareBtn.addEventListener('click', () => handleFunction('square'));
+      openParenBtn.addEventListener('click', () => appendToDisplay('('));
+      closeParenBtn.addEventListener('click', () => appendToDisplay(')'));
+      logBtn.addEventListener('click', () => handleFunction('log'));
+      lnBtn.addEventListener('click', () => handleFunction('ln'));
+      cosBtn.addEventListener('click', () => handleFunction('cos'));
+      tanBtn.addEventListener('click', () => handleFunction('tan'));
+      sinBtn.addEventListener('click', () => handleFunction('sin'));
+      eBtn.addEventListener('click', () => appendToDisplay('Math.E'));
+      degRadToggle.addEventListener('click', toggleDegreeMode);
+      equalsBtn.addEventListener('click', calculate);
+      backspaceBtn.addEventListener('click', handleBackspace);
+
+      // Keyboard support
+      document.addEventListener('keydown', handleKeyboard);
+
+      // History panel
+      historyEl.addEventListener('click', () => toggleHistoryPanel());
+      closeHistoryBtn.addEventListener('click', () => toggleHistoryPanel());
+      window.addEventListener('click', (e) => {
+        if (e.target === historyPanel) {
+          toggleHistoryPanel();
+        }
+      });
+    }
+
+    // Handle number input
+    function handleNumber(number) {
+      if (state.waitingForOperand) {
+        state.display = number;
+        state.waitingForOperand = false;
+      } else {
+        // Prevent multiple decimals in number
+        if (number === '.' && state.display.includes('.')) {
+          return;
+        }
+        state.display = state.display === '0' ? number : state.display + number;
+      }
+      updateDisplay();
+    }
+
+    // Handle operation button
+    function handleOperation(op) {
+      const inputValue = parseFloat(state.display);
+
+      // If we have a first operand and waiting, just update operator
+      if (state.firstOperand !== null && state.waitingForOperand) {
+        state.operator = op;
+        state.previousDisplay = state.display;
+        updateDisplay();
+        return;
+      }
+
+      // If there's no first operand yet, store current display
+      if (state.firstOperand === null) {
+        state.firstOperand = inputValue;
+      } else if (!state.waitingForOperand) {
+        // Calculate previous operation first
+        calculate();
+      }
+
+      state.waitingForOperand = true;
+      state.operator = op;
+      state.previousDisplay = state.display;
+      updateDisplay();
+    }
+
+    // Calculate result
+    function calculate() {
+      if (state.operator === null || state.waitingForOperand) return;
+
+      const secondOperand = parseFloat(state.display);
+      let result;
+
+      try {
+        result = performCalculation(state.firstOperand, secondOperand, state.operator);
+        state.display = formatResult(result);
+      } catch (e) {
+        state.display = 'Error';
+        state.history = [];
+      }
+
+      // Add to history if not error
+      if (state.display !== 'Error') {
+        addToHistory({
+          expression: state.previousDisplay + ' ' + state.operator + ' ' + secondOperand,
+          result: state.display,
+        });
+      }
+
+      state.firstOperand = null;
+      state.operator = null;
+      state.waitingForOperand = true;
+      updateDisplay();
+    }
+
+    // Perform calculation
+    function performCalculation(a, b, op) {
+      switch (op) {
+        case '+': return a + b;
+        case '-': return a - b;
+        case '×': case '*': return a * b;
+        case '÷': case '/':
+          if (b === 0) throw new Error('Division by zero');
+          return a / b;
+        case '%': return a % b;
+        default: return b;
+      }
+    }
+
+    // Handle function buttons
+    function handleFunction(funcId) {
+      switch (funcId) {
+        case 'sqrt':
+          try {
+            const val = Math.sqrt(parseFloat(state.display));
+            state.display = formatResult(val);
+            addToHistory({ expression: '√(' + displayToString() + ')', result: state.display });
+          } catch (e) {
+            state.display = 'Error';
+          }
+          break;
+
+        case 'square':
+          try {
+            const val = Math.pow(parseFloat(state.display), 2);
+            state.display = formatResult(val);
+            addToHistory({ expression: displayToString() + '²', result: state.display });
+          } catch (e) {
+            state.display = 'Error';
+          }
+          break;
+
+        case 'power':
+          // xʸ: store first operand, wait for second
+          state.firstOperand = parseFloat(state.display);
+          state.waitingForOperand = true;
+          state.operator = '^';
+          state.display = '0';
+          updateDisplay();
+          break;
+
+        case 'log':
+          try {
+            const val = Math.log10(parseFloat(state.display));
+            state.display = formatResult(val);
+            addToHistory({ expression: 'log(' + displayToString() + ')', result: state.display });
+          } catch (e) {
+            state.display = 'Error';
+          }
+          break;
+
+        case 'ln':
+          try {
+            const val = Math.log(parseFloat(state.display));
+            state.display = formatResult(val);
+            addToHistory({ expression: 'ln(' + displayToString() + ')', result: state.display });
+          } catch (e) {
+            state.display = 'Error';
+          }
+          break;
+
+        case 'sin':
+          try {
+            const val = Math.sin(degToRad(parseFloat(state.display)));
+            state.display = formatResult(val);
+            addToHistory({ expression: 'sin(' + displayToString() + '°)', result: state.display });
+          } catch (e) {
+            state.display = 'Error';
+          }
+          break;
+
+        case 'cos':
+          try {
+            const val = Math.cos(degToRad(parseFloat(state.display)));
+            state.display = formatResult(val);
+            addToHistory({ expression: 'cos(' + displayToString() + '°)', result: state.display });
+          } catch (e) {
+            state.display = 'Error';
+          }
+          break;
+
+        case 'tan':
+          try {
+            const val = Math.tan(degToRad(parseFloat(state.display)));
+            state.display = formatResult(val);
+            addToHistory({ expression: 'tan(' + displayToString() + '°)', result: state.display });
+          } catch (e) {
+            state.display = 'Error';
+          }
+          break;
+      }
+      updateDisplay();
+    }
+
+    // Convert degrees to radians
+    function degToRad(degrees) {
+      if (isNaN(degrees)) return 0;
+      return degrees * (Math.PI / 180);
+    }
+
+    // Toggle degree/radians mode
+    function toggleDegreeMode() {
+      state.degreeMode = !state.degreeMode;
+      updateDegRadButton();
+      updateDisplay();
+    }
+
+    function updateDegRadButton() {
+      if (state.degreeMode) {
+        degRadToggle.textContent = 'DEG';
+      } else {
+        degRadToggle.textContent = 'RAD';
+      }
+    }
+
+    // Display to string for history
+    function displayToString() {
+      return state.display;
+    }
+
+    // Format result - remove unnecessary trailing zeros
+    function formatResult(num) {
+      if (isNaN(num) || !isFinite(num)) return 'Error';
+      if (!isFinite(num)) return 'Error';
+
+      // Handle very large/small numbers
+      if (Math.abs(num) > 1e15) {
+        return num.toExponential(4);
+      }
+
+      // Round to 10 decimal places max
+      const rounded = Math.round(num * 1e10) / 1e10;
+
+      // Convert to string and remove trailing zeros
+      let formatted = rounded.toString();
+      // Remove trailing zeros after decimal point
+      if (formatted.includes('.')) {
+        formatted = formatted.replace(/0+$/, '').replace(/\.$/, '');
+      }
+
+      // Ensure we have at least some value
+      if (formatted === '' || formatted === '-') formatted = '0';
+
+      return formatted;
+    }
+
+    // Add to history
+    function addToHistory(calc) {
+      state.history.unshift(calc);
+      if (state.history.length > 20) {
+        state.history = state.history.slice(0, 20);
+      }
+      localStorage.setItem('calcHistory', JSON.stringify(state.history));
+      renderHistory();
+    }
+
+    // Render history panel
+    function renderHistory() {
+      if (state.history.length === 0) {
+        historyList.innerHTML = '<p style="color: var(--muted); font-style: italic; padding: 20px 0;">No calculations yet</p>';
+        return;
+      }
+
+      historyList.innerHTML = state.history.map((item, index) => {
+        const expr = item.expression || '—';
+        const res = item.result || '—';
+        return `<div class="history-item"><span>${expr}</span><span class="history-result">${res}</span></div>`;
+      }).join('');
+    }
+
+    // Clear all
+    function clearAll() {
+      state.display = '0';
+      state.previousDisplay = '';
+      state.firstOperand = null;
+      state.operator = null;
+      state.waitingForOperand = true;
+      updateDisplay();
+    }
+
+    // Handle percent
+    function handlePercent() {
+      const val = parseFloat(state.display) / 100;
+      state.display = formatResult(val);
+      updateDisplay();
+    }
+
+    // Handle backspace
+    function handleBackspace() {
+      state.display = state.display.length > 1 ? state.display.slice(0, -1) : '0';
+      updateDisplay();
+    }
+
+    // Keyboard support
+    function handleKeyboard(event) {
+      const key = event.key;
+
+      if (/[0-9]/.test(key)) {
+        handleNumber(key);
+      } else if (key === '.') {
+        handleNumber('.');
+      } else if (key === '+' || key === '-' || key === '*' || key === '/' || key === '%') {
+        handleOperation(key);
+      } else if (key === 'Enter' || key === '=') {
+        event.preventDefault();
+        calculate();
+      } else if (key === 'Escape') {
+        clearAll();
+      } else if (key === 'Backspace') {
+        handleBackspace();
+      } else if (key === 'c' || key === 'C') {
+        clearAll();
+      } else if (key === '(' || key === ')') {
+        appendToDisplay(key);
+      } else if (key === 'd' || key === 'D') {
+        toggleDegreeMode();
+      } else if (key === 's' || key === 'S') {
+        handleFunction('sin');
+      } else if (key === 'o' || key === 'O') {
+        handleFunction('cos');
+      } else if (key === 't' || key === 'T') {
+        handleFunction('tan');
+      } else if (key === 'l' || key === 'L') {
+        handleFunction('log');
+      } else if (key === 'n' || key === 'N') {
+        handleFunction('ln');
+      } else if (key === 'p' || key === 'P') {
+        handleFunction('power');
+      } else if (key === 'u' || key === 'U') {
+        handleFunction('sqrt');
+      } else if (key === 'q' || key === 'Q') {
+        handleFunction('square');
+      }
+    }
+
+    // Append to display
+    function appendToDisplay(text) {
+      if (state.waitingForOperand) {
+        state.display = text;
+        state.waitingForOperand = false;
+      } else {
+        if (text === '(' || text === ')') {
+          state.display += text;
+        } else if (text === '.' && state.display.includes('.')) {
+          return;
+        } else {
+          state.display += text;
+        }
+      }
+      updateDisplay();
+    }
+
+    // Toggle history panel
+    function toggleHistoryPanel() {
+      historyPanel.classList.toggle('open');
+    }
+
+    // Initialize calculator
+    init();
+  </script>
+</body>
+</html>
