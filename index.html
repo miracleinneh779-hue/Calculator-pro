@@ -4,9 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calculator Pro</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* System fonts for portability - no external dependencies */
+    @font-face {
+      font-family: 'System Inter';
+      font-style: normal;
+      font-weight: 400;
+      src: local('Segoe UI'), local('Roboto'), local('Helvetica Neue'), local('Arial'), local('sans-serif');
+    }
+    @font-face {
+      font-family: 'System Mono';
+      font-style: normal;
+      font-weight: 400;
+      src: local('SF Mono'), local('Consolas'), local('Monaco'), local('monospace');
+    }
+  </style>
   <style>
     :root {
       --bg: #0b0e14;
@@ -64,7 +76,7 @@
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
     body {
-      font-family: 'Inter', system-ui, sans-serif;
+      font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
       margin: 0;
@@ -156,7 +168,7 @@
       transition: background 0.35s ease;
     }
     .expression-line {
-      font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+      font-family: 'SF Mono', 'Consolas', 'Monaco', 'JetBrains Mono', monospace;
       font-size: 14px;
       color: var(--text-dim);
       min-height: 20px;
@@ -168,7 +180,7 @@
     }
     .expression-line::-webkit-scrollbar { display: none; }
     .result-line {
-      font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+      font-family: 'SF Mono', 'Consolas', 'Monaco', 'JetBrains Mono', monospace;
       font-size: clamp(40px, 13vw, 54px);
       font-weight: 500;
       line-height: 1.1;
@@ -204,7 +216,7 @@
     .key {
       border: none;
       border-radius: 16px;
-      font-family: 'Inter', sans-serif;
+      font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', system-ui, sans-serif;
       font-size: 17px;
       font-weight: 500;
       cursor: pointer;
@@ -315,12 +327,12 @@
     }
     .history-item:hover { background: var(--func-bg); }
     .history-item .h-expr {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: 'SF Mono', 'Consolas', 'Monaco', 'JetBrains Mono', monospace;
       font-size: 13px; color: var(--text-dim);
       word-break: break-all;
     }
     .history-item .h-result {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: 'SF Mono', 'Consolas', 'Monaco', 'JetBrains Mono', monospace;
       font-size: 18px; font-weight: 600; color: var(--accent-1);
       margin-top: 4px;
     }
@@ -830,6 +842,45 @@
         committedResult = ''; justEvaluated = false;
       }
       if (expression === '') { update(); return; }
+      
+      // Smart percentage calculation for standard calculator behavior
+      // Pattern: [number] [op] [number] % 
+      // Result: [number] [op] ([number] * [previous_number] / 100)
+      const match = expression.match(/^(-?\d+\.?\d*)([+\-×÷])(-?\d+\.?\d*)$/);
+      if (match) {
+        const [, left, op, right] = match;
+        const leftNum = parseFloat(left);
+        const rightNum = parseFloat(right);
+        let result;
+        switch (op) {
+          case '+':
+          case '-':
+            result = op === '+' ? leftNum + (leftNum * rightNum / 100) : leftNum - (leftNum * rightNum / 100);
+            break;
+          case '×':
+            result = leftNum * rightNum / 100;
+            break;
+          case '÷':
+            if (rightNum === 0) { showError(); return; }
+            result = leftNum / (rightNum / 100);
+            break;
+          default:
+            result = rightNum / 100;
+        }
+        expression = formatNumber(result);
+        update();
+        return;
+      }
+      
+      // Simple percentage: just divide by 100
+      const simpleMatch = expression.match(/(-?\d+\.?\d*)$/);
+      if (simpleMatch) {
+        const num = parseFloat(simpleMatch[1]);
+        expression = expression.slice(0, -simpleMatch[1].length) + formatNumber(num / 100);
+        update();
+        return;
+      }
+      
       expression += '%';
       update();
     }
